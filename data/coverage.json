@@ -1,0 +1,45 @@
+{
+  "mcp": "eu.ansvar/french-data-protection-mcp",
+  "authority": "CNIL — Commission nationale de l'informatique et des libertés",
+  "jurisdiction": "France",
+  "last_updated": "2026-04-09",
+  "sources": [
+    {
+      "id": "cnil_decisions",
+      "name": "CNIL Deliberations and Sanctions",
+      "url": "https://www.cnil.fr/fr/deliberations",
+      "license": "Etalab Open License",
+      "types": ["sanction", "mise_en_demeure", "deliberation", "avis"],
+      "language": "fr"
+    },
+    {
+      "id": "cnil_guidelines",
+      "name": "CNIL Guidance Documents",
+      "url": "https://www.cnil.fr/fr/les-guides-de-la-cnil",
+      "license": "Etalab Open License",
+      "types": ["guide", "recommandation", "referentiel", "FAQ"],
+      "language": "fr"
+    }
+  ],
+  "topics": [
+    "consent",
+    "cookies",
+    "transfers",
+    "dpia",
+    "breach_notification",
+    "privacy_by_design",
+    "employee_monitoring",
+    "health_data",
+    "children"
+  ],
+  "tools": [
+    "fr_dp_search_decisions",
+    "fr_dp_get_decision",
+    "fr_dp_search_guidelines",
+    "fr_dp_get_guideline",
+    "fr_dp_list_topics",
+    "fr_dp_about",
+    "fr_dp_list_sources",
+    "fr_dp_check_data_freshness"
+  ]
+}

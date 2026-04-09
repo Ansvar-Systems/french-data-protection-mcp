@@ -29,7 +29,9 @@ import {
   searchGuidelines,
   getGuideline,
   listTopics,
+  getDataFreshness,
 } from "./db.js";
+import { buildCitation } from "./citation.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -121,6 +123,16 @@ const TOOLS = [
     description: "Return metadata about this MCP server: version, data source, coverage, and tool list.",
     inputSchema: { type: "object" as const, properties: {}, required: [] },
   },
+  {
+    name: "fr_dp_list_sources",
+    description: "List all data sources used by this MCP server with provenance, license, and update schedule.",
+    inputSchema: { type: "object" as const, properties: {}, required: [] },
+  },
+  {
+    name: "fr_dp_check_data_freshness",
+    description: "Check when the database was last updated and report data coverage statistics (record counts, newest dates).",
+    inputSchema: { type: "object" as const, properties: {}, required: [] },
+  },
 ];
 
 // --- Zod schemas -------------------------------------------------------------
@@ -175,6 +187,18 @@ function createMcpServer(): Server {
       };
     }
 
+    function metaBlock() {
+      return {
+        disclaimer:
+          "This is a research tool, not regulatory or legal advice. Verify all references against official CNIL publications before making compliance decisions.",
+        data_age:
+          "Periodic updates; may lag official CNIL publications. Use fr_dp_check_data_freshness for current status.",
+        copyright:
+          "Data sourced from CNIL (Commission nationale de l'informatique et des libertés) — official French data protection authority.",
+        source_url: "https://www.cnil.fr/",
+      };
+    }
+
     try {
       switch (name) {
         case "fr_dp_search_decisions": {
@@ -185,7 +209,7 @@ function createMcpServer(): Server {
             topic: parsed.topic,
             limit: parsed.limit,
           });
-          return textContent({ results, count: results.length });
+          return textContent({ results, count: results.length, _meta: metaBlock() });
         }
 
         case "fr_dp_get_decision": {
@@ -194,7 +218,18 @@ function createMcpServer(): Server {
           if (!decision) {
             return errorContent(`Decision not found: ${parsed.reference}`);
           }
-          return textContent(decision);
+          const decisionRecord = decision as Record<string, unknown>;
+          return textContent({
+            ...decisionRecord,
+            _citation: buildCitation(
+              String(decisionRecord.reference ?? parsed.reference),
+              String(decisionRecord.title ?? decisionRecord.reference ?? parsed.reference),
+              "fr_dp_get_decision",
+              { reference: parsed.reference },
+              decisionRecord.url as string | undefined,
+            ),
+            _meta: metaBlock(),
+          });
         }
 
         case "fr_dp_search_guidelines": {
@@ -205,7 +240,7 @@ function createMcpServer(): Server {
             topic: parsed.topic,
             limit: parsed.limit,
           });
-          return textContent({ results, count: results.length });
+          return textContent({ results, count: results.length, _meta: metaBlock() });
         }
 
         case "fr_dp_get_guideline": {
@@ -214,12 +249,23 @@ function createMcpServer(): Server {
           if (!guideline) {
             return errorContent(`Guideline not found: id=${parsed.id}`);
           }
-          return textContent(guideline);
+          const guidelineRecord = guideline as Record<string, unknown>;
+          return textContent({
+            ...guidelineRecord,
+            _citation: buildCitation(
+              String(guidelineRecord.reference ?? guidelineRecord.id ?? parsed.id),
+              String(guidelineRecord.title ?? guidelineRecord.reference ?? `Guideline ${parsed.id}`),
+              "fr_dp_get_guideline",
+              { id: String(parsed.id) },
+              guidelineRecord.url as string | undefined,
+            ),
+            _meta: metaBlock(),
+          });
         }
 
         case "fr_dp_list_topics": {
           const topics = listTopics();
-          return textContent({ topics, count: topics.length });
+          return textContent({ topics, count: topics.length, _meta: metaBlock() });
         }
 
         case "fr_dp_about": {
@@ -229,13 +275,51 @@ function createMcpServer(): Server {
             description:
               "CNIL (Commission Nationale de l'Informatique et des Libertés) MCP server. Provides access to French data protection authority decisions, sanctions, mises en demeure, and official guidance documents.",
             data_source: "CNIL (https://www.cnil.fr/)",
+            coverage: {
+              decisions: "CNIL deliberations, sanctions, and mises en demeure",
+              guidelines: "CNIL guides, recommandations, referentiels, and FAQs",
+              topics: "Consent, cookies, transfers, DPIA, breach notification, privacy by design, employee monitoring, health data, children",
+            },
             tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
+            _meta: metaBlock(),
           });
+        }
+
+        case "fr_dp_list_sources": {
+          return textContent({
+            sources: [
+              {
+                id: "cnil_decisions",
+                name: "CNIL Deliberations and Sanctions",
+                authority: "Commission nationale de l'informatique et des libertés (CNIL)",
+                url: "https://www.cnil.fr/fr/deliberations",
+                license: "Etalab Open License / Open Government Licence France",
+                coverage: "CNIL decisions, sanctions, and mises en demeure",
+                update_frequency: "Periodic",
+                language: "fr",
+              },
+              {
+                id: "cnil_guidelines",
+                name: "CNIL Guidance Documents",
+                authority: "Commission nationale de l'informatique et des libertés (CNIL)",
+                url: "https://www.cnil.fr/fr/les-guides-de-la-cnil",
+                license: "Etalab Open License / Open Government Licence France",
+                coverage: "Guides pratiques, recommandations, référentiels, and FAQs",
+                update_frequency: "Periodic",
+                language: "fr",
+              },
+            ],
+            _meta: metaBlock(),
+          });
+        }
+
+        case "fr_dp_check_data_freshness": {
+          const freshness = getDataFreshness();
+          return textContent({ ...freshness, _meta: metaBlock() });
         }
 
         default:
           return errorContent(`Unknown tool: ${name}`);
-      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return errorContent(`Error executing ${name}: ${message}`);

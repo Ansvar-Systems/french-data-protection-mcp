@@ -4,7 +4,7 @@
 
 [![npm version](https://badge.fury.io/js/%40ansvar%2Ffrench-data-protection-mcp.svg)](https://www.npmjs.com/package/@ansvar/french-data-protection-mcp)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![CI](https://github.com/Ansvar-Systems/french-data-protection-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Ansvar-Systems/french-data-protection-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/Ansvar-Systems/french-data-protection-mcp/actions/workflows/ghcr-build.yml/badge.svg)](https://github.com/Ansvar-Systems/french-data-protection-mcp/actions/workflows/ghcr-build.yml)
 
 Query French data protection data -- regulations, decisions, and requirements from CNIL (Commission nationale de l'informatique et des libertes) -- directly from Claude, Cursor, or any MCP-compatible client.
 
@@ -90,16 +90,18 @@ npx @ansvar/french-data-protection-mcp
 
 ---
 
-## Available Tools (6)
+## Available Tools (8)
 
 | Tool | Description |
 |------|-------------|
-| `fr_dp_search_decisions` | Full-text search across CNIL decisions (deliberations, sanctions, mises en demeure). Returns matching decisions with ... |
-| `fr_dp_get_decision` | Get a specific CNIL decision by reference number (e.g., |
-| `fr_dp_search_guidelines` | Search CNIL guidance documents: guides pratiques, recommandations, referentiels, and FAQs. Covers GDPR implementation... |
+| `fr_dp_search_decisions` | Full-text search across CNIL decisions (deliberations, sanctions, mises en demeure). Returns matching decisions with reference, entity name, fine amount, and GDPR articles cited. |
+| `fr_dp_get_decision` | Get a specific CNIL decision by reference number (e.g., 'SAN-2022-009'). |
+| `fr_dp_search_guidelines` | Search CNIL guidance documents: guides pratiques, recommandations, referentiels, and FAQs. Covers GDPR implementation, DPIA, cookie consent, privacy by design, and more. |
 | `fr_dp_get_guideline` | Get a specific CNIL guidance document by its database ID. |
 | `fr_dp_list_topics` | List all covered data protection topics with French and English names. Use topic IDs to filter decisions and guidelines. |
 | `fr_dp_about` | Return metadata about this MCP server: version, data source, coverage, and tool list. |
+| `fr_dp_list_sources` | List all data sources used by this MCP server with provenance, license, and update schedule. |
+| `fr_dp_check_data_freshness` | Check when the database was last updated and report data coverage statistics. |
 
 All tools return structured data with source references and timestamps.
 
