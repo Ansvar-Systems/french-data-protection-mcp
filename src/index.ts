@@ -25,6 +25,7 @@ import {
   searchGuidelines,
   getGuideline,
   listTopics,
+  getDataFreshness,
 } from "./db.js";
 import { buildCitation } from "./citation.js";
 
@@ -151,6 +152,24 @@ const TOOLS = [
       required: [],
     },
   },
+  {
+    name: "fr_dp_list_sources",
+    description: "List all data sources used by this MCP server with provenance, license, and update schedule.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "fr_dp_check_data_freshness",
+    description: "Check when the database was last updated and report data coverage statistics (record counts, newest dates).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // --- Zod schemas for argument validation --------------------------------------
@@ -194,6 +213,18 @@ function errorContent(message: string) {
   };
 }
 
+function metaBlock() {
+  return {
+    disclaimer:
+      "This is a research tool, not regulatory or legal advice. Verify all references against official CNIL publications before making compliance decisions.",
+    data_age:
+      "Periodic updates; may lag official CNIL publications. Use fr_dp_check_data_freshness for current status.",
+    copyright:
+      "Data sourced from CNIL (Commission nationale de l'informatique et des libertés) — official French data protection authority.",
+    source_url: "https://www.cnil.fr/",
+  };
+}
+
 // --- Server setup ------------------------------------------------------------
 
 const server = new Server(
@@ -218,7 +249,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           topic: parsed.topic,
           limit: parsed.limit,
         });
-        return textContent({ results, count: results.length });
+        return textContent({ results, count: results.length, _meta: metaBlock() });
       }
 
       case "fr_dp_get_decision": {
@@ -227,7 +258,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!decision) {
           return errorContent(`Decision not found: ${parsed.reference}`);
         }
-        const decisionRecord = decision as Record<string, unknown>;
+        const decisionRecord = decision as unknown as Record<string, unknown>;
         return textContent({
           ...decisionRecord,
           _citation: buildCitation(
@@ -237,6 +268,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             { reference: parsed.reference },
             decisionRecord.url as string | undefined,
           ),
+          _meta: metaBlock(),
         });
       }
 
@@ -248,7 +280,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           topic: parsed.topic,
           limit: parsed.limit,
         });
-        return textContent({ results, count: results.length });
+        return textContent({ results, count: results.length, _meta: metaBlock() });
       }
 
       case "fr_dp_get_guideline": {
@@ -257,7 +289,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!guideline) {
           return errorContent(`Guideline not found: id=${parsed.id}`);
         }
-        const guidelineRecord = guideline as Record<string, unknown>;
+        const guidelineRecord = guideline as unknown as Record<string, unknown>;
         return textContent({
           ...guidelineRecord,
           _citation: buildCitation(
@@ -267,12 +299,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             { id: String(parsed.id) },
             guidelineRecord.url as string | undefined,
           ),
+          _meta: metaBlock(),
         });
       }
 
       case "fr_dp_list_topics": {
         const topics = listTopics();
-        return textContent({ topics, count: topics.length });
+        return textContent({ topics, count: topics.length, _meta: metaBlock() });
       }
 
       case "fr_dp_about": {
@@ -288,7 +321,41 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             topics: "Consent, cookies, transfers, DPIA, breach notification, privacy by design, employee monitoring, health data, children",
           },
           tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
+          _meta: metaBlock(),
         });
+      }
+
+      case "fr_dp_list_sources": {
+        return textContent({
+          sources: [
+            {
+              id: "cnil_decisions",
+              name: "CNIL Deliberations and Sanctions",
+              authority: "Commission nationale de l'informatique et des libertés (CNIL)",
+              url: "https://www.cnil.fr/fr/deliberations",
+              license: "Etalab Open License / Open Government Licence France",
+              coverage: "CNIL decisions, sanctions, and mises en demeure",
+              update_frequency: "Periodic",
+              language: "fr",
+            },
+            {
+              id: "cnil_guidelines",
+              name: "CNIL Guidance Documents",
+              authority: "Commission nationale de l'informatique et des libertés (CNIL)",
+              url: "https://www.cnil.fr/fr/les-guides-de-la-cnil",
+              license: "Etalab Open License / Open Government Licence France",
+              coverage: "Guides pratiques, recommandations, référentiels, and FAQs",
+              update_frequency: "Periodic",
+              language: "fr",
+            },
+          ],
+          _meta: metaBlock(),
+        });
+      }
+
+      case "fr_dp_check_data_freshness": {
+        const freshness = getDataFreshness();
+        return textContent({ ...freshness, _meta: metaBlock() });
       }
 
       default:

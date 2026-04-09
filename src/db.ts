@@ -261,3 +261,44 @@ export function listTopics(): Topic[] {
     .prepare("SELECT * FROM topics ORDER BY id")
     .all() as Topic[];
 }
+
+// --- Data freshness -----------------------------------------------------------
+
+export interface DataFreshness {
+  decision_count: number;
+  guideline_count: number;
+  topic_count: number;
+  newest_decision_date: string | null;
+  newest_guideline_date: string | null;
+  db_path: string;
+  status: "ok" | "empty";
+}
+
+export function getDataFreshness(): DataFreshness {
+  const db = getDb();
+  const decisionCount = (
+    db.prepare("SELECT COUNT(*) as count FROM decisions").get() as { count: number }
+  ).count;
+  const guidelineCount = (
+    db.prepare("SELECT COUNT(*) as count FROM guidelines").get() as { count: number }
+  ).count;
+  const topicCount = (
+    db.prepare("SELECT COUNT(*) as count FROM topics").get() as { count: number }
+  ).count;
+  const newestDecision = db
+    .prepare("SELECT MAX(date) as newest_date FROM decisions WHERE date IS NOT NULL")
+    .get() as { newest_date: string | null };
+  const newestGuideline = db
+    .prepare("SELECT MAX(date) as newest_date FROM guidelines WHERE date IS NOT NULL")
+    .get() as { newest_date: string | null };
+
+  return {
+    decision_count: decisionCount,
+    guideline_count: guidelineCount,
+    topic_count: topicCount,
+    newest_decision_date: newestDecision.newest_date,
+    newest_guideline_date: newestGuideline.newest_date,
+    db_path: DB_PATH,
+    status: decisionCount > 0 || guidelineCount > 0 ? "ok" : "empty",
+  };
+}
